@@ -1,20 +1,31 @@
 import React from 'react'
-import {StyleSheet, View, Text, ActivityIndicator, ScrollView, Image, TouchableOpacity} from 'react-native'
-import {getFilmDetailFromApi, getImageFromApi} from '../API/TMDBApi'
+import { StyleSheet, View, Text, ActivityIndicator, ScrollView, Image, TouchableOpacity } from 'react-native'
+import { getFilmDetailFromApi, getImageFromApi } from '../API/TMDBApi'
 import moment from 'moment'
 import numeral from 'numeral'
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
 class FilmDetail extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
             film: undefined,
-            isLoading: true
+            isLoading: false
         }
     }
 
     componentDidMount() {
+        const favoriteFilmIndex = this.props.favoritesFilm.findIndex(item => item.id === this.props.navigation.state.params.idFilm)
+        if (favoriteFilmIndex !== -1) { // Film déjà dans nos favoris, on a déjà son détail
+            // Pas besoin d'appeler l'API ici, on ajoute le détail stocké dans notre state global au state de notre component
+            this.setState({
+                film: this.props.favoritesFilm[favoriteFilmIndex]
+            })
+            return
+        }
+        // Le film n'est pas dans nos favoris, on n'a pas son détail
+        // On appelle l'API pour récupérer son détail
+        this.setState({ isLoading: true })
         getFilmDetailFromApi(this.props.navigation.state.params.idFilm).then(data => {
             this.setState({
                 film: data,
@@ -23,23 +34,18 @@ class FilmDetail extends React.Component {
         })
     }
 
-    componentDidUpdate() {
-        console.log("componentDidUpdate : ")
-        console.log(this.props.favoritesFilm)
-    }
-
     _displayLoading() {
         if (this.state.isLoading) {
             return (
                 <View style={styles.loading_container}>
-                    <ActivityIndicator size='large'/>
+                    <ActivityIndicator size='large' />
                 </View>
             )
         }
     }
 
     _toggleFavorite() {
-        const action = {type: "TOGGLE_FAVORITE", value: this.state.film}
+        const action = { type: "TOGGLE_FAVORITE", value: this.state.film }
         this.props.dispatch(action)
     }
 
@@ -58,7 +64,7 @@ class FilmDetail extends React.Component {
     }
 
     _displayFilm() {
-        const {film} = this.state
+        const { film } = this.state
         if (film != undefined) {
             return (
                 <ScrollView style={styles.scrollview_container}>
@@ -73,16 +79,15 @@ class FilmDetail extends React.Component {
                         {this._displayFavoriteImage()}
                     </TouchableOpacity>
                     <Text style={styles.description_text}>{film.overview}</Text>
-                    <Text style={styles.default_text}>Sorti
-                        le {moment(new Date(film.release_date)).format('DD/MM/YYYY')}</Text>
+                    <Text style={styles.default_text}>Sorti le {moment(new Date(film.release_date)).format('DD/MM/YYYY')}</Text>
                     <Text style={styles.default_text}>Note : {film.vote_average} / 10</Text>
                     <Text style={styles.default_text}>Nombre de votes : {film.vote_count}</Text>
                     <Text style={styles.default_text}>Budget : {numeral(film.budget).format('0,0[.]00 $')}</Text>
-                    <Text style={styles.default_text}>Genre(s) : {film.genres.map(function (genre) {
+                    <Text style={styles.default_text}>Genre(s) : {film.genres.map(function(genre){
                         return genre.name;
                     }).join(" / ")}
                     </Text>
-                    <Text style={styles.default_text}>Companie(s) : {film.production_companies.map(function (company) {
+                    <Text style={styles.default_text}>Companie(s) : {film.production_companies.map(function(company){
                         return company.name;
                     }).join(" / ")}
                     </Text>
@@ -104,13 +109,6 @@ class FilmDetail extends React.Component {
 const styles = StyleSheet.create({
     main_container: {
         flex: 1
-    },
-    favorite_container: {
-        alignItems: 'center', // Alignement des components enfants sur l'axe secondaire, X ici
-    },
-    favorite_image: {
-        width: 40,
-        height: 40
     },
     loading_container: {
         position: 'absolute',
@@ -140,16 +138,23 @@ const styles = StyleSheet.create({
         color: '#000000',
         textAlign: 'center'
     },
+    favorite_container: {
+        alignItems: 'center',
+    },
     description_text: {
         fontStyle: 'italic',
         color: '#666666',
         margin: 5,
         marginBottom: 15
     },
-    default_text: {
+    default_text: {
         marginLeft: 5,
         marginRight: 5,
         marginTop: 5,
+    },
+    favorite_image: {
+        width: 40,
+        height: 40
     }
 })
 
